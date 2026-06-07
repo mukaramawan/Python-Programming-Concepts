@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import Body, FastAPI
+from fastapi import Body, FastAPI, Path, Query
 from pydantic import BaseModel, Field, computed_field
 
 app = FastAPI()
@@ -22,7 +22,7 @@ class Book:
         self.published_date = published_date
 
 class BookRequest(BaseModel):
-    id: Optional[int] = Field(description="The ID is not needed on the creation", default=None)
+    id: Optional[int] = Field(title="The ID is not needed on the creation", default=None)
     title: str = Field(min_length=3)
     author: str = Field(min_length=1)
     description: str = Field(min_length=5 ,max_length=200)
@@ -62,13 +62,13 @@ def find_book_id(book: Book):
     return book
 
 @app.get("/books/{book_id}")
-async def read_book(book_id: int):
+async def read_book(book_id: int = Path(ge=0)):
     for book in books:
         if book.id == book_id:
             return book
         
 @app.get("/books/")
-async def read_book_by_rating(rating: int):
+async def read_book_by_rating(rating: int = Query(gt=0, le=6)):
     result = []
     for book in books:
         if book.rating == rating:
@@ -82,14 +82,14 @@ async def update_book(book: BookRequest):
             books[i] = book
 
 @app.delete("/books/{book_id}")
-async def delete_book(book_id: int):
+async def delete_book(book_id: int = Path(ge=0)):
     for i in range(len(books)):
         if books[i].id == book_id:
             del books[i]
             break
 
 @app.get("/books/publish/")
-async def read_book_by_publish_date(published_date: int):
+async def read_book_by_publish_date(published_date: int = Query(ge=1900, le=2030)):
     result = []
     for book in books:
         if book.published_date == published_date:
