@@ -5,7 +5,6 @@
 
 from datetime import datetime, timedelta, timezone 
 from typing_extensions import Annotated
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from models import Users
@@ -22,7 +21,6 @@ router = APIRouter(
 )
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 SECRET_KEY = "821nfcu32fdoi984u0983jofniuhf4389u8vnu"
 ALGORITHM = "HS256"
@@ -71,8 +69,8 @@ def authenticate_user(username: str, password: str, db: db_dependency):
         return False
     return user
 
-def create_access_token(username: str, user_id: int, expires_delta: timedelta = None):
-    encode = {"sub": username, "id": user_id}
+def create_access_token(username: str, user_id: int, user_role: str, expires_delta: timedelta = None):
+    encode = {"sub": username, "id": user_id, "role": user_role}
     expires_delta = datetime.now(timezone.utc) + expires_delta
     encode.update({"exp": expires_delta})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -82,9 +80,10 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         user_id: int = payload.get("id")
+        user_role: str = payload.get("role")
         if username is None or user_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-        return {"username": username, "id": user_id}
+        return {"username": username, "id": user_id, "role": user_role}
     except jwt.JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     
@@ -93,5 +92,5 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     user = authenticate_user(form_data.username, form_data.password, db)
     if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    token = create_access_token(user.username, user.id, timedelta(minutes=30))
+    token = create_access_token(user.username, user.id, user.role, timedelta(minutes=30))
     return {"access_token": token, "token_type": "bearer"}
