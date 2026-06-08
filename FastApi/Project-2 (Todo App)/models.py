@@ -1,3 +1,8 @@
+# when this class is imported or executed 
+# base.metadata
+#       ↓
+# todos table definition
+
 from database import base
 from sqlalchemy import Column, Integer, String, Boolean
 
